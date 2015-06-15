@@ -90,7 +90,7 @@ unsigned char gLedStatus;
 // p17 data
 //p00 clk
 
-/*
+
 #define SDA_H()                 (P17 = 1)
 #define SDA_L()                 (P17 = 0)
 
@@ -101,7 +101,8 @@ unsigned char gLedStatus;
 
 #define CHG_SDA_OUT()   (DDR17 = 0)
 #define CHG_SDA_IN()    (DDR17 = 1)
-*/
+
+/*
 #define SDA_H()                 (P10 = 1)
 #define SDA_L()                 (P10 = 0)
 
@@ -112,7 +113,7 @@ unsigned char gLedStatus;
 
 #define CHG_SDA_OUT()   (DDR10 = 0)
 #define CHG_SDA_IN()    (DDR10 = 1)
-
+*/
 
 #define IIC_ADDR  0xA0
 
@@ -282,7 +283,7 @@ static unsigned char IIC_GET_BYTE()
         temp_char_2 =0;
         
         SCL_L();
-        //CHG_SDA_IN();
+        CHG_SDA_IN();   //xyl change
         for(temp_char_1=8; temp_char_1>0; temp_char_1--)
         {
                 SCL_L();
@@ -502,13 +503,13 @@ void factoryReset()
         GIE =0;
         
         T1DATA = 150;
-        pwm_start();
-
+        //pwm_start();
+          temp_char_1=0;
         do{
-                delay_ms(300);
                 pwm_start();
+                  delay_ms(300);
+                  pwm_stop();
                 delay_ms(300);
-                pwm_stop();
                 temp_char_1++;
            }while(temp_char_1<3);
         while(1)
@@ -645,7 +646,10 @@ void delay_with_key_detect()
                         if(temp_char_1>=100)    // 1s
                         {
                                 if(gLampMode != ADJUST_MODE)
-                                        return;                 
+                                 {
+                                                temp_char_2 = 1;
+                                                return;
+                                 }
                                 temp_char_2 = 1;
                                 temp_char_1 =0;
                                 changeLampStrength();
@@ -700,9 +704,9 @@ void InitConfig()
         KBIM3 = 1; 
 
         DDR0 = 0;
-        DDR1 = 0x48;   // 01001000
+        DDR1 = 0x4B;   // 01001011
 
-   //     PUCON = 0x0;    //打开上拉
+       PUCON = 0x7F;    //打开上拉 P17
 
        // P1 = 0;
 
@@ -746,6 +750,17 @@ void main()
         }
 
 */
+
+          temp_char_1=0;
+T1DATA = 150;
+        do{
+                pwm_start();
+                  delay_ms(300);
+                  pwm_stop();
+                delay_ms(300);
+                temp_char_1++;
+           }while(temp_char_1<3);
+
         if(gCrcCode  != 0x51AE)
         {
                 gCrcCode = 0x51AE; 
@@ -816,12 +831,12 @@ void main()
                         delay_with_key_detect();
 
                          if(temp_char_2 == 0)   //short press
-                {
+                    {
                                 if(gLampMode == ADJUST_MODE)
                                 {
                                 //enter 小夜灯模式
                                         EnterNightMode();
-                         }
+                                    }
                                 else            
                                         LampPowerOFF();
                         }
