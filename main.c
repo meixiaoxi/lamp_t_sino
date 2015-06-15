@@ -10,6 +10,8 @@ unsigned char gCountCHAR;
 unsigned char gLampMode;
 
 
+unsigned char gStrengthTemp;
+
 unsigned int gCrcCode;
 unsigned char gLedStatus;
 
@@ -88,7 +90,7 @@ unsigned char gLedStatus;
 // p17 data
 //p00 clk
 
-
+/*
 #define SDA_H()                 (P17 = 1)
 #define SDA_L()                 (P17 = 0)
 
@@ -99,6 +101,17 @@ unsigned char gLedStatus;
 
 #define CHG_SDA_OUT()   (DDR17 = 0)
 #define CHG_SDA_IN()    (DDR17 = 1)
+*/
+#define SDA_H()                 (P10 = 1)
+#define SDA_L()                 (P10 = 0)
+
+#define SCL_H()                 (P11 = 1)
+#define SCL_L()                 (P11 = 0)
+
+#define GET_SDA()               (P10)
+
+#define CHG_SDA_OUT()   (DDR10 = 0)
+#define CHG_SDA_IN()    (DDR10 = 1)
 
 
 #define IIC_ADDR  0xA0
@@ -200,14 +213,36 @@ static void IIC_SEND_ACK()
         //SCL_L();
 }
 
-
-
-
-
-static void IIC_SEND_BYTE(unsigned char val)
+static char IIC_CHECK_ACK()
 {
+        //char ret=0;
+
+        SCL_L();
+        CHG_SDA_IN();
+        swait_uSec(3);  
+        SCL_H();
+        swait_uSec(3);
+        if(GET_SDA() == 0)
+        {
+                temp_char_1= 1;
+        }
+        else
+        {
+                temp_char_1 = 0;
+        }
+        //SCL_L();
+        //SDA_H();
+        //CHG_SDA_OUT();
+        
+        return temp_char_1;
+}
+
+
+static char IIC_SEND_BYTE(unsigned char val)
+{
+        //signed char i; temp_char_1
         CHG_SDA_OUT();
-        for (temp_char_1=8;temp_char_1 >0; temp_char_1--)
+        for (temp_char_1 = 8; temp_char_1 > 0; temp_char_1--)
         {
                 SCL_L();
                 if(val & markbit[temp_char_1-1])
@@ -236,14 +271,17 @@ static void IIC_SEND_BYTE(unsigned char val)
                 //SCL_L();
                 //Wait_uSec(2);
         }
+        return IIC_CHECK_ACK();
 }
 
 static unsigned char IIC_GET_BYTE()
 {
+        //signed char i;   temp_char_1
+        //unsigned char rdata = 0;   temp_char_2
 
-        temp_char_2 = 0;
+        temp_char_2 =0;
         
-       SCL_L();
+        SCL_L();
         //CHG_SDA_IN();
         for(temp_char_1=8; temp_char_1>0; temp_char_1--)
         {
@@ -255,7 +293,7 @@ static unsigned char IIC_GET_BYTE()
                 _nop_();
                 if(GET_SDA())
                 {
-                        temp_char_2 |= markbit[temp_char_1-1];
+                   temp_char_2 = temp_char_2 | markbit[temp_char_1-1];
                 }
         }
 
@@ -290,8 +328,13 @@ void  I2C_write(unsigned char reg, unsigned char val)
         //return ret;
 }
 
-unsigned char I2C_read(unsigned char reg)
+short I2C_read(unsigned char reg)
 {
+        //unsigned char val;    temp_char_3
+        //signed short ret = 0; temp_char_2
+
+        temp_char_2 = 0;
+
         GIE = 0;
 
         IIC_START();
@@ -313,18 +356,19 @@ unsigned char I2C_read(unsigned char reg)
         Wait_uSec(1);
         IIC_START();    
         IIC_SEND_BYTE(IIC_ADDR+1);
-        temp_char_1 =IIC_GET_BYTE();
+        temp_char_3 =IIC_GET_BYTE();
         IIC_SEND_ACK();
         IIC_STOP();
         #endif
         Wait_uSec(10);
         GIE = 1;
 
-        return temp_char_1;
+        return (short)temp_char_3;
 }
 
 void EnterNightMode()
 {
+        gStrengthTemp = T1DATA;
         LoadCtl =1;
         //SlowChangeStrength(POWER_NIGHT);
         pwm_stop();
@@ -339,14 +383,18 @@ void SlowChangeStrength(unsigned char type)
 
      //    temp  = 0;
        //  count = 0;
-          
+
+        temp_char_1 =0 ;
+        temp_char_2 = 0;
+         
                 if(type == POWER_ON)
                 {
                         while(1)
                         {
                                 if(temp_char_1> gLedStrength)
                                         break;
-                                T1DATA = temp_char_1++;
+                                T1DATA = temp_char_1;
+                                    temp_char_1++;
 
                                 /*
                                 if(temp < 70)
@@ -393,7 +441,8 @@ void SlowChangeStrength(unsigned char type)
                                                 break;
                                 }
                                 pwm_stop();
-                                T1DATA = temp_char_1--;
+                                T1DATA = temp_char_1;
+                                   temp_char_1--;
                                 pwm_start();
 
                                 delay_ms(20);
@@ -474,7 +523,7 @@ void LampPowerOFF()
         g3STick = 0;
         gLampMode = ADJUST_MODE;
         PWM_IO = 0;
-        gLedStrength = I2C_read(ADDR_STRENGTH);
+        gLedStrength = gStrengthTemp;
         if(gLedStrength<LED_MIN_LEVEL|| gLedStrength>LED_MAX_LEVEL)
                 gLedStrength = LED_DEFAULT_LEVEL;
         DisWatchdog();
@@ -580,17 +629,17 @@ void delay_with_key_detect()
 //      int mCount = 0;
 //      unsigned char isLongPress = 0;
         temp_char_1 = 0;
-        temp_char_2 = 0;
+        temp_char_2 = 3;
         delay_ms(10);
         if(P_KEY != 0)  //按键防抖
                 return;
+         temp_char_2 = 0;
         while(1)
         {
                 delay_ms(10);
                 if(P_KEY == 1)   //key is released
                         break;
                 temp_char_1++;
-        
                 if(temp_char_2 == 0)
                 {
                         if(temp_char_1>=100)    // 1s
@@ -627,29 +676,7 @@ void delay_with_key_detect()
         }
 
         
-        if(temp_char_2 == 0)   //short press
-        {
-                if(gLampMode == ADJUST_MODE)
-                {
-                        //enter 小夜灯模式
-                        EnterNightMode();
-                        return;
-                }
-                
-                LampPowerOFF();
-                return;
-        //      return LED_OFF;
-        }
 
-        if(gLampMode ==  ADJUST_MODE)  //clear
-        {
-                gCountCHAR =0;
-                gCountINT =0;
-        }
-        // lamp strength has been changed, we need save
-        I2C_write(ADDR_STRENGTH,gLedStrength);
-
-        //return LED_ON;
 }
 
 
@@ -673,11 +700,13 @@ void InitConfig()
         KBIM3 = 1; 
 
         DDR0 = 0;
-        DDR1 = 0xCB;   // 11001011
+        DDR1 = 0x48;   // 01001000
 
-        PUCON = 0x0;    //打开上拉
+   //     PUCON = 0x0;    //打开上拉
 
-        P1 = 0;
+       // P1 = 0;
+
+         CurCtl=1;
 
         //PWM
         T1CR   = 0xC0;
@@ -701,7 +730,22 @@ void main()
         
         InitConfig();    //初始化配置
         DisWatchdog();
+/*
+        while(1)
+        {
+                if(gCountINT >=1)
+                {
+                        //      I2C_write(0x00,0xAA);
 
+                        delay_ms(500);
+
+                           readByte = I2C_read(0x00);
+                        gCountINT = 0;
+                }
+                        
+        }
+
+*/
         if(gCrcCode  != 0x51AE)
         {
                 gCrcCode = 0x51AE; 
@@ -770,7 +814,25 @@ void main()
                 if(P_KEY == 0)   //key press
                 {
                         delay_with_key_detect();
-                }
+
+                         if(temp_char_2 == 0)   //short press
+                {
+                                if(gLampMode == ADJUST_MODE)
+                                {
+                                //enter 小夜灯模式
+                                        EnterNightMode();
+                         }
+                                else            
+                                        LampPowerOFF();
+                        }
+                        else if(gLampMode ==  ADJUST_MODE)  //clear
+                        {       
+                                        gCountCHAR =0;
+                                gCountINT =0;
+                                        // lamp strength has been changed, we need save
+                                        I2C_write(ADDR_STRENGTH,gLedStrength);                                          
+                        }
+               }
                 
                  if(gLampMode == ADJUST_MODE) 
                 {
@@ -783,6 +845,7 @@ void main()
 
                 ClrWdt();
         }
+     
 }
 
 
