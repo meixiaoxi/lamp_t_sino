@@ -369,7 +369,7 @@ short I2C_read(unsigned char reg)
 
 void EnterNightMode()
 {
-        gStrengthTemp = T1DATA;
+        gStrengthTemp = gLedStrength;
         LoadCtl =1;
         //SlowChangeStrength(POWER_NIGHT);
         pwm_stop();
@@ -499,7 +499,6 @@ void SlowChangeStrength(unsigned char type)
 
 void factoryReset()
 {
-        I2C_write(ADDR_STRENGTH_FLAG, 0x00);   //clear our flag
         GIE =0;
         
         T1DATA = 150;
@@ -550,6 +549,7 @@ void LampPowerOFF()
         {
                 if(g3STick > 183)    //   3s/16.384ms  factoryReset();
                 {
+                           I2C_write(ADDR_STRENGTH_FLAG, 0x00);   //clear our flag
                         factoryReset();
                 }
         }
@@ -779,6 +779,7 @@ T1DATA = 150;
                 {
                         if(g3STick > 183)    //   3s/16.384ms  factoryReset();
                         {
+                                    I2C_write(ADDR_STRENGTH_FLAG, 0x00);   //clear our flag
                                 factoryReset();
                         }
                 }
@@ -830,26 +831,26 @@ T1DATA = 150;
                 {
                         delay_with_key_detect();
 
-                         if(temp_char_2 == 0)   //short press
-                    {
+                        if(temp_char_2 == 0)   //short press
+                           {
                                 if(gLampMode == ADJUST_MODE)
-                                {
-                                //enter Сҹ��ģʽ
                                         EnterNightMode();
-                                    }
                                 else            
                                         LampPowerOFF();
                         }
-                        else if(gLampMode ==  ADJUST_MODE)  //clear
+                        else if(gLampMode ==  ADJUST_MODE && temp_char_2 == 1) 
                         {       
-                                        gCountCHAR =0;
+                                     //clear
+                                gCountCHAR =0;
                                 gCountINT =0;
-                                        // lamp strength has been changed, we need save
-                                        I2C_write(ADDR_STRENGTH,gLedStrength);                                          
+                                // lamp strength has been changed, we need save
+                                I2C_write(ADDR_STRENGTH,gLedStrength);                                          
                         }
+
+                        temp_char_2 = 3;   //reset press flag
                }
                 
-                 if(gLampMode == ADJUST_MODE) 
+                if(gLampMode == ADJUST_MODE) 
                 {
                         if(gCountINT >= 2647)      // 3 Hour  3*60*60*1000/16.384/255 = 2647
                                 LampPowerOFF();
