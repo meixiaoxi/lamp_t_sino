@@ -45,7 +45,7 @@ unsigned char gLedStatus;
 #define ADDR_STRENGTH_FLAG      0x00   //led strengtrh ÊÇ·ñÓÐÐ§
 #define ADDR_STRENGTH 0x09              //led ÁÁ¶È
 
-#define  ADDR_ONOFF_FLAG        0x12    //ÁÁÃð×´Ì¬
+#define  ADDR_ONOFF_FLAG        0x15    //ÁÁÃð×´Ì¬
 
 #define LED_PRE_ON      0x33
 #define LED_NOW_ON 0x33
@@ -528,9 +528,10 @@ void LampPowerOFF()
                 gLedStrength = LED_DEFAULT_LEVEL;
         DisWatchdog();
 
+        I2C_write(ADDR_ONOFF_FLAG, LED_NOW_OFF);
         SlowChangeStrength(POWER_OFF);
 
-        gLedStatus = LED_NOW_OFF;
+        //gLedStatus = LED_NOW_OFF;
         
         pwm_stop();
         CurCtl= 1;
@@ -558,9 +559,10 @@ void LampPowerOFF()
         
         pwm_start();
 
-        gLedStatus = LED_NOW_ON;
+        //gLedStatus = LED_NOW_ON;
+        I2C_write(ADDR_ONOFF_FLAG, LED_NOW_ON);
         SlowChangeStrength(POWER_ON);
-
+         
         if(T1DATA <=PWM_NUM_START_LOAD)
         {
                 LoadCtl = 1;
@@ -724,14 +726,11 @@ void main()
         InitConfig();    //³õÊ¼»¯ÅäÖÃ
         DisWatchdog();
 
-        if(gCrcCode  != 0x51AE)
-        {
-                gCrcCode = 0x51AE; 
-                gLedStatus = LED_NOW_ON;
-        }
-        else if(gLedStatus == LED_PRE_ON)
-        {
-                gLedStatus = LED_NOW_OFF;
+        gLedStatus = I2C_read(ADDR_ONOFF_FLAG);
+
+        if(gLedStatus == LED_PRE_ON)
+       {
+                  I2C_write(ADDR_ONOFF_FLAG,LED_NOW_OFF);
                 key_interrupt_enable();
                 Stop();
                 key_interrupt_disable();
@@ -743,13 +742,13 @@ void main()
                         if(g3STick > 183)    //   3s/16.384ms  factoryReset();
                         {
                                     I2C_write(ADDR_STRENGTH_FLAG, 0x00);   //clear our flag
-                                        factoryReset();
+                                    factoryReset();
                         }
+
                 }
         }
 
-
-        EnWatchdog();
+       EnWatchdog();
         
         //check whether strength exists, if not, use default strength
         gLedStrength = I2C_read(ADDR_STRENGTH_FLAG);
@@ -773,10 +772,9 @@ void main()
         }
 
          pwm_start();
-
-        gLedStatus = LED_NOW_ON;
+         I2C_write(ADDR_ONOFF_FLAG,LED_NOW_ON);
         SlowChangeStrength(POWER_ON);
-
+        
        while(1)
        {
                 if(T1DATA <=PWM_NUM_START_LOAD)
@@ -793,9 +791,10 @@ void main()
                         break;
                 ClrWdt();
         }
-        
-        
-        //main loop
+
+         //it's a dummy code. fuck compiler
+        gLedStatus = LED_NOW_ON;
+
         while(1)
         {
                 if(P_KEY == 0)   //key press
