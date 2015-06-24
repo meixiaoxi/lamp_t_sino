@@ -5,8 +5,7 @@ unsigned char gLedWave;   //记录此时的led亮度变化趋势
 unsigned char gLedStrength;    //当前led亮度值
 unsigned short g3STick;   // 3S 的计数
 unsigned char gSysReadPA;
-unsigned int gCountINT;
-unsigned char gCountCHAR;
+
 unsigned char gLampMode;
 
 
@@ -147,9 +146,6 @@ void isr(void) __interrupt
                 T0IF = 0;
 
                 g3STick++;
-                gCountCHAR++;
-                if(gCountCHAR == 0xFF)
-                        gCountINT++;
         }
         __asm
                 swapar  _StatusBuf
@@ -366,7 +362,7 @@ short I2C_read(unsigned char reg)
 
         return (short)temp_char_3;
 }
-
+/*
 void EnterNightMode()
 {
         gStrengthTemp = gLedStrength;
@@ -378,7 +374,7 @@ void EnterNightMode()
         CurCtl= 0;
         gLampMode = NIGHT_MODE;
 }
-
+*/
 void SlowChangeStrength(unsigned char type)
 {
 
@@ -387,7 +383,10 @@ void SlowChangeStrength(unsigned char type)
 
         temp_char_1 =0 ;
         temp_char_2 = 0;
-         
+
+        if(gLedStrength ==  6)
+                CurCtl = 0;
+        
                 if(type == POWER_ON)
                 {
                         while(1)
@@ -395,15 +394,16 @@ void SlowChangeStrength(unsigned char type)
                                 if(temp_char_1> gLedStrength)
                                         break;
                                 T1DATA = temp_char_1;
-                                    temp_char_1++;
+                                    if(temp_char_1 == 255)
+                                                break;
+                                                                
+                                 temp_char_1++;
 
-                                /*
-                                if(temp < 70)
-                                        delay_ms(30);
+                                if(temp_char_1 < 70)
+                                        delay_ms(60);
                                 else
                                         delay_ms(30);
-                                */
-                                delay_ms(20);
+
                                 if(P_KEY == 0)
                                 {       
                                         temp_char_2++;
@@ -446,7 +446,7 @@ void SlowChangeStrength(unsigned char type)
                                    temp_char_1--;
                                 pwm_start();
 
-                                delay_ms(20);
+                                delay_ms(10);
 
 
                                 if(P_KEY == 0)
@@ -463,12 +463,14 @@ void SlowChangeStrength(unsigned char type)
                                         {
                                                 if(type == POWER_NIGHT)
                                                 {
+                                                        /*
                                                         #if defined(BREATHE_MODE_SUPPORT)
                                                         EnterBreatheMode();
                                                         #elif defined(HYPNOSIS_MODE_SUPPORT)
                                                         EnterHypnosisMode();
                                                         #endif
                                                         return;
+                                                        */
                                                 }
                                         }
                                 }
@@ -519,12 +521,10 @@ void LampPowerOFF()
 {
 //      pwm_stop();
         LoadCtl = 0;
-        gCountCHAR = gCountINT= 0;
         g3STick = 0;
         gLampMode = ADJUST_MODE;
         PWM_IO = 0;
-        gLedStrength = gStrengthTemp;
-        if(gLedStrength<LED_MIN_LEVEL|| gLedStrength>LED_MAX_LEVEL)
+        if(gLedStrength<6)
                 gLedStrength = LED_DEFAULT_LEVEL;
         DisWatchdog();
 
@@ -561,10 +561,6 @@ void LampPowerOFF()
         gLedStatus = LED_NOW_ON;
         SlowChangeStrength(POWER_ON);
 
-        if(T1DATA != gLedStrength)
-        {
-                EnterNightMode();
-        }
         if(T1DATA <=PWM_NUM_START_LOAD)
         {
                 LoadCtl = 1;
@@ -575,43 +571,38 @@ void LampPowerOFF()
 
 void changeLampStrength()
 {
-//      unsigned char temp = 0;
-        temp_char_3 = 0;
         if(gLedWave == LED_STRENGTH_UP)
         {
-                gLedStrength = gLedStrength + 1;
-                if(gLedStrength >= LED_MAX_LEVEL)
+                CurCtl = 1;
+                  if(gLedStrength != 255)
+                        gLedStrength = gLedStrength + 1;
+                else
                 {
-                        #if 1
-                                        gLedStrength = gLedStrength -1;
-                                        do{
-                                                pwm_stop();
-                                                delay_ms(400);
-                                                pwm_start();
-                                                delay_ms(400);
-                                                temp_char_3++;
-                                        }while(temp_char_3<3);
-                                        gLedWave = LED_STRENGTH_DN;
-                        #endif
+                        for(temp_char_3 =0; temp_char_3 <3; temp_char_3++)
+                     {
+                               pwm_stop();
+                                delay_ms(400);
+                                pwm_start();
+                               delay_ms(400);
+                     }
+                     gLedWave = LED_STRENGTH_DN;
                 }               
         }
         else
         {
-                gLedStrength = gLedStrength - 1;
-                if(gLedStrength  == (LED_MIN_LEVEL -1))
+                  if(gLedStrength != 6)
+                 gLedStrength = gLedStrength - 1;
+                else
                 {
-                        #if 1
-                                        gLedStrength = LED_MIN_LEVEL;
-                                        do{
-                                                pwm_stop();
-                                                delay_ms(400);
-                                                pwm_start();
-                                                delay_ms(400);
-                                                temp_char_3++;
-                                        }while(temp_char_3<3);
-
-                                        gLedWave = LED_STRENGTH_UP;
-                        #endif
+                     CurCtl=0;                
+                     for(temp_char_3 =0; temp_char_3 <3; temp_char_3++)
+                     {
+                               pwm_stop();
+                                delay_ms(400);
+                                pwm_start();
+                               delay_ms(400);
+                     }
+                   gLedWave = LED_STRENGTH_UP;
                 }       
         }
 
@@ -688,9 +679,7 @@ void InitConfig()
 {
         g3STick = 0;
         gLampMode = ADJUST_MODE;
-         gCountCHAR =0;
-         gCountINT= 0;
-         gLedWave = LED_STRENGTH_UP;
+         gLedWave = LED_STRENGTH_DN;
         //KIN mask
         //initial value, code space
         /*
@@ -734,32 +723,6 @@ void main()
         
         InitConfig();    //初始化配置
         DisWatchdog();
-/*
-        while(1)
-        {
-                if(gCountINT >=1)
-                {
-                        //      I2C_write(0x00,0xAA);
-
-                        delay_ms(500);
-
-                           readByte = I2C_read(0x00);
-                        gCountINT = 0;
-                }
-                        
-        }
-
-*/
-
-          temp_char_1=0;
-T1DATA = 150;
-        do{
-                pwm_start();
-                  delay_ms(300);
-                  pwm_stop();
-                delay_ms(300);
-                temp_char_1++;
-           }while(temp_char_1<3);
 
         if(gCrcCode  != 0x51AE)
         {
@@ -780,10 +743,9 @@ T1DATA = 150;
                         if(g3STick > 183)    //   3s/16.384ms  factoryReset();
                         {
                                     I2C_write(ADDR_STRENGTH_FLAG, 0x00);   //clear our flag
-                                factoryReset();
+                                        factoryReset();
                         }
                 }
-        //      g3STick =0;
         }
 
 
@@ -805,22 +767,31 @@ T1DATA = 150;
         }
 
         //冗错处理  
-   if(gLedStrength > LED_MAX_LEVEL|| gLedStrength < LED_MIN_LEVEL)
-   {
-        gLedStrength = LED_DEFAULT_LEVEL;
-   }
+         if(gLedStrength < 6)
+        {
+                gLedStrength = LED_DEFAULT_LEVEL;
+        }
 
          pwm_start();
 
         gLedStatus = LED_NOW_ON;
         SlowChangeStrength(POWER_ON);
-        if(T1DATA != gLedStrength)
-        {
-                EnterNightMode();
-        }
-        if(T1DATA <=PWM_NUM_START_LOAD)
-        {
-                LoadCtl = 1;
+
+       while(1)
+       {
+                if(T1DATA <=PWM_NUM_START_LOAD)
+                {
+                  LoadCtl = 1;
+                }    
+                  if(T1DATA != gLedStrength)
+                {
+                        LampPowerOFF();
+                        if(T1DATA == gLedStrength)
+                                break;
+                }
+                else
+                        break;
+                ClrWdt();
         }
         
         
@@ -832,32 +803,28 @@ T1DATA = 150;
                         delay_with_key_detect();
 
                         if(temp_char_2 == 0)   //short press
-                           {
-                                if(gLampMode == ADJUST_MODE)
-                                        EnterNightMode();
-                                else            
+                         {
+                                while(1)
+                                {
                                         LampPowerOFF();
+                                        if(T1DATA <=PWM_NUM_START_LOAD)
+                                        {
+                                                LoadCtl = 1;
+                                        }
+                                        if(T1DATA == gLedStrength)
+                                                break;
+
+                                            ClrWdt();
+                                }
                         }
                         else if(gLampMode ==  ADJUST_MODE && temp_char_2 == 1) 
                         {       
-                                     //clear
-                                gCountCHAR =0;
-                                gCountINT =0;
                                 // lamp strength has been changed, we need save
                                 I2C_write(ADDR_STRENGTH,gLedStrength);                                          
                         }
 
                         temp_char_2 = 3;   //reset press flag
                }
-                
-                if(gLampMode == ADJUST_MODE) 
-                {
-                        if(gCountINT >= 2647)      // 3 Hour  3*60*60*1000/16.384/255 = 2647
-                                LampPowerOFF();
-                }
-
-                //LoadCtlDetect();
-
 
                 ClrWdt();
         }
