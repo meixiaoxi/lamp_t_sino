@@ -532,7 +532,8 @@ void LampPowerOFF()
         SlowChangeStrength(POWER_OFF);
 
         //gLedStatus = LED_NOW_OFF;
-        
+
+        T1DATA = 0;
         pwm_stop();
         CurCtl= 1;
         while(P_KEY==0){};
@@ -556,11 +557,12 @@ void LampPowerOFF()
         }
         
         EnWatchdog();
-        
-        pwm_start();
 
         //gLedStatus = LED_NOW_ON;
         I2C_write(ADDR_ONOFF_FLAG, LED_NOW_ON);
+
+        pwm_start();
+
         SlowChangeStrength(POWER_ON);
          
         if(T1DATA <=PWM_NUM_START_LOAD)
@@ -697,7 +699,7 @@ void InitConfig()
         DDR0 = 0;
         DDR1 = 0x4B;   // 01001011
 
-       PUCON = 0x7F;    //打开上拉 P17
+       PUCON = 0x00;    //0x7F;    //打开上拉 P17
 
        // P1 = 0;
 
@@ -771,8 +773,9 @@ void main()
                 gLedStrength = LED_DEFAULT_LEVEL;
         }
 
-         pwm_start();
          I2C_write(ADDR_ONOFF_FLAG,LED_NOW_ON);
+
+         pwm_start();
         SlowChangeStrength(POWER_ON);
         
        while(1)
