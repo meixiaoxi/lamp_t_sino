@@ -32,7 +32,7 @@ unsigned char gLedStatus;
 #define PWM_NUM_START_LOAD              70
 
 #define LED_MIN_LEVEL   7
-#define LED_MAX_LEVEL   254
+#define LED_MAX_LEVEL   255
 #define LED_DEFAULT_LEVEL       200
 
 #define KEY_PRESS       0
@@ -384,7 +384,7 @@ void SlowChangeStrength(unsigned char type)
         temp_char_1 =0 ;
         temp_char_2 = 0;
 
-        if(gLedStrength ==  6)
+        if(gLedStrength ==  8)
                 CurCtl = 0;
         
                 if(type == POWER_ON)
@@ -399,7 +399,7 @@ void SlowChangeStrength(unsigned char type)
                                                                 
                                  temp_char_1++;
 
-                                if(temp_char_1 < 70)
+                                if(temp_char_1 < 170)
                                         delay_ms(60);
                                 else
                                         delay_ms(30);
@@ -427,6 +427,8 @@ void SlowChangeStrength(unsigned char type)
                 }
                 else if(type == POWER_OFF)
                 {
+                        T1DATA = 0;
+                         #if 0
                         temp_char_1 = T1DATA;
                         
                         while(1)
@@ -494,6 +496,7 @@ void SlowChangeStrength(unsigned char type)
                                 }
                                 */
                         }
+                    #endif
                 }
 
         
@@ -503,12 +506,15 @@ void factoryReset()
 {
         GIE =0;
         
-        T1DATA = 150;
         //pwm_start();
           temp_char_1=0;
         do{
+                  T1DATA = 150;
+                  delay_ms(1);
                 pwm_start();
                   delay_ms(300);
+                    T1DATA = 0;
+                    delay_ms(1);
                   pwm_stop();
                 delay_ms(300);
                 temp_char_1++;
@@ -524,7 +530,7 @@ void LampPowerOFF()
         g3STick = 0;
         gLampMode = ADJUST_MODE;
         PWM_IO = 0;
-        if(gLedStrength<6)
+        if(gLedStrength<8)
                 gLedStrength = LED_DEFAULT_LEVEL;
         DisWatchdog();
 
@@ -584,8 +590,12 @@ void changeLampStrength()
                 {
                         for(temp_char_3 =0; temp_char_3 <3; temp_char_3++)
                      {
+                           T1DATA = 0;
+                                delay_ms(1);
                                pwm_stop();
                                 delay_ms(400);
+                                   T1DATA = gLedStrength;
+                                        delay_ms(1);
                                 pwm_start();
                                delay_ms(400);
                      }
@@ -594,15 +604,19 @@ void changeLampStrength()
         }
         else
         {
-                  if(gLedStrength != 6)
+                  if(gLedStrength != 8)
                  gLedStrength = gLedStrength - 1;
                 else
                 {
                      CurCtl=0;                
                      for(temp_char_3 =0; temp_char_3 <3; temp_char_3++)
                      {
+                           T1DATA = 0;
+                                delay_ms(1);
                                pwm_stop();
                                 delay_ms(400);
+                                    T1DATA = gLedStrength;
+                                        delay_ms(1);
                                 pwm_start();
                                delay_ms(400);
                      }
@@ -652,6 +666,7 @@ void delay_with_key_detect()
                 }
                 else
                 {
+                        /*
                         if(gLedStrength >150)
                         {
                                 if(temp_char_1 >= 4)  //10ms
@@ -660,14 +675,15 @@ void delay_with_key_detect()
                                         changeLampStrength();
                                 }
                         }
-                        else
-                        {
+                        */
+                       // else
+                       // {
                                 if(temp_char_1 >= 6)  //60ms
                                 {
                                         temp_char_1 = 0;
                                         changeLampStrength();
                                 }
-                        }
+                       // }
                 }
 
         //      LoadCtlDetect();
@@ -683,7 +699,7 @@ void InitConfig()
 {
         g3STick = 0;
         gLampMode = ADJUST_MODE;
-         gLedWave = LED_STRENGTH_DN;
+         gLedWave = LED_STRENGTH_UP;
         //KIN mask
         //initial value, code space
         /*
@@ -701,13 +717,13 @@ void InitConfig()
 
        PUCON = 0x00;    //0x7F;    //打开上拉 P17
 
-       // P1 = 0;
+         P1 = 0;
 
          CurCtl=1;
 
         //PWM
         T1CR   = 0xC0;
-        T1LOAD = 249;
+        T1LOAD = 254;
         T1DATA = 0;
 
         T0CR = 0x07;
@@ -764,11 +780,11 @@ void main()
                 I2C_write(ADDR_STRENGTH_FLAG, 0xAB);  //write our flag
                 gLedStrength = LED_MAX_LEVEL;  //max level
                 //delay_ms(5);
-                I2C_write(ADDR_STRENGTH,254);
+                I2C_write(ADDR_STRENGTH,255);
         }
 
         //冗错处理  
-         if(gLedStrength < 6)
+         if(gLedStrength < 8)
         {
                 gLedStrength = LED_DEFAULT_LEVEL;
         }
