@@ -666,24 +666,23 @@ void delay_with_key_detect()
                 }
                 else
                 {
-                        /*
                         if(gLedStrength >150)
                         {
-                                if(temp_char_1 >= 4)  //10ms
-                                {
+                                        if(temp_char_1 >= 2)  //10ms
+                                        {
                                         temp_char_1 = 0;
                                         changeLampStrength();
                                 }
                         }
-                        */
-                       // else
-                       // {
-                                if(temp_char_1 >= 6)  //60ms
+                       
+                        else
+                      {
+                                if(temp_char_1 >= 5)  //60ms
                                 {
                                         temp_char_1 = 0;
                                         changeLampStrength();
                                 }
-                       // }
+                      }
                 }
 
         //      LoadCtlDetect();
