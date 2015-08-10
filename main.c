@@ -555,9 +555,9 @@ void LampPowerOFF()
         g3STick =0;
         while(P_KEY == 0) //wait key release
         {
-                if(g3STick > 183)    //   3s/16.384ms  factoryReset();
+                if(g3STick > 122)    //   3s/16.384ms  factoryReset();
                 {
-                           I2C_write(ADDR_STRENGTH_FLAG, 0x00);   //clear our flag
+                           I2C_write(ADDR_STRENGTH, 255);   //clear our flag
                         factoryReset();
                 }
         }
@@ -756,9 +756,9 @@ void main()
                 g3STick = 0;
                 while(P_KEY == 0) //wait key release
                 {
-                        if(g3STick > 183)    //   3s/16.384ms  factoryReset();
+                        if(g3STick > 122)    //   3s/16.384ms  factoryReset();
                         {
-                                    I2C_write(ADDR_STRENGTH_FLAG, 0x00);   //clear our flag
+                                    I2C_write(ADDR_STRENGTH, 255);   //clear our flag
                                     factoryReset();
                         }
 
@@ -777,9 +777,9 @@ void main()
         else
         {
                 I2C_write(ADDR_STRENGTH_FLAG, 0xAB);  //write our flag
-                gLedStrength = LED_MAX_LEVEL;  //max level
+                gLedStrength = 8;  //max level
                 //delay_ms(5);
-                I2C_write(ADDR_STRENGTH,255);
+                I2C_write(ADDR_STRENGTH,8);
         }
 
         //»ﬂ¥Ì¥¶¿Ì  
