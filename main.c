@@ -400,15 +400,15 @@ void SlowChangeStrength(unsigned char type)
                                  temp_char_1++;
 
                                 if(temp_char_1 < 170)
-                                        delay_ms(60);
+                                        delay_ms(20);    //60
                                 else
-                                        delay_ms(30);
+                                        delay_ms(10);    //30
 
                                 #if 1
                                 if(P_KEY == 0)
                                 {       
                                         temp_char_2++;
-                                             if(temp_char_2 > 25)   //short key press
+                                             if(temp_char_2 > 35)   //short key press
                                         {
                                                 //enter Сҹ��ģʽ
                                                 //EnterNightMode();
