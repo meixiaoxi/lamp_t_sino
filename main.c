@@ -19,7 +19,7 @@ unsigned char gLedStatus;
 #define DisWatchdog()   WDTEN = 0
 
 #define key_interrupt_enable()  KBIE = 1
-#define key_interrupt_disable() KBIE = 0
+#define key_interrupt_disable() KBIE = 1
 
 #define pwm_stop()    PWMOUT = 0  //关闭PWM
 #define pwm_start()   PWMOUT = 1  //启动PWM
@@ -139,6 +139,7 @@ void isr(void) __interrupt
         if( KBIF&&KBIE) 
         {
                 KBIF = 0;               //清除KINT外部按键中断标志
+                gLedWave = 0x25;
         }
 
         if(T0IF)
@@ -383,7 +384,8 @@ void SlowChangeStrength(unsigned char type)
 
         temp_char_1 =0 ;
         temp_char_2 = 0;
-
+        temp_char_3 = gLedWave;
+                
         if(gLedStrength ==  8)
                 CurCtl = 0;
         
@@ -400,15 +402,15 @@ void SlowChangeStrength(unsigned char type)
                                  temp_char_1++;
 
                                 if(temp_char_1 < 170)
-                                        delay_ms(20);    //60
+                                        delay_ms(15);    //60
                                 else
-                                        delay_ms(10);    //30
+                                        delay_ms(7);    //30
 
                                 #if 1
                                 if(P_KEY == 0)
                                 {       
                                         temp_char_2++;
-                                             if(temp_char_2 > 35)   //short key press
+                                             if(temp_char_2 > 35 && temp_char_3 != 0x54)   //short key press
                                         {
                                                 //enter 小夜灯模式
                                                 //EnterNightMode();
@@ -553,7 +555,7 @@ void LampPowerOFF()
         CurCtl= 1;
         while(P_KEY==0)
          {
-                if(g3STick >122)
+                if(g3STick >350)
                 {
                          I2C_write(ADDR_STRENGTH, 5);   //clear our flag
                       factoryReset();
@@ -568,7 +570,7 @@ void LampPowerOFF()
         
         DisWatchdog();
 
-        while(P_KEY==0){};
+        //while(P_KEY==0){};
 
         #if 0
         g3STick =0;
@@ -589,6 +591,8 @@ void LampPowerOFF()
 
         pwm_start();
 
+        if(P_KEY==0)
+                gLedWave = 0x54;
         SlowChangeStrength(POWER_ON);
          
         if(T1DATA <=PWM_NUM_START_LOAD)
@@ -660,6 +664,7 @@ void delay_with_key_detect()
 //      unsigned char isLongPress = 0;
         temp_char_1 = 0;
         temp_char_2 = 3;
+        temp_char_3 = gLedWave;
         delay_ms(10);
         if(P_KEY != 0)  //按键防抖
                 return;
@@ -708,8 +713,6 @@ void delay_with_key_detect()
         //      LoadCtlDetect();
 
         }
-
-        
 
 }
 
@@ -787,7 +790,8 @@ void main()
                 key_interrupt_disable();
 
                 DisWatchdog();   //按键中断唤醒之后，系统会默认将RCEN置1
-                while(P_KEY == 0){};
+                
+           //     while(P_KEY == 0){};
                 #if 0
                 g3STick = 0;
                 while(P_KEY == 0) //wait key release
@@ -829,6 +833,8 @@ void main()
        
          I2C_write(ADDR_ONOFF_FLAG,LED_NOW_ON);
 
+         if(gLedStatus == LED_PRE_ON && P_KEY == 0)
+                gLedWave = 0x54;
          pwm_start();
         SlowChangeStrength(POWER_ON);
         
@@ -859,7 +865,7 @@ void main()
                 {
                         delay_with_key_detect();
 
-                        if(temp_char_2 == 1)   //long press
+                        if(temp_char_2 == 1 && temp_char_3 != 0x54)   //long press
                          {
 
                                         while(1)
@@ -876,7 +882,9 @@ void main()
                         }
                         else if(gLampMode ==  ADJUST_MODE && temp_char_2 ==0) 
                         { 
-                                        if(gLedLevel ==5)
+                            if(temp_char_3 != 0x54)
+                            {
+                                    if(gLedLevel ==5)
                                         {
                                                 CurCtl =0;
                                                 gLedLevel =1;
@@ -894,8 +902,9 @@ void main()
                                         {
                                          LoadCtl = 1;
                                         }
-                                             else
-                                                 LoadCtl=0;
+                                        else
+                                             LoadCtl=0;
+                                }
                         }
 
                         temp_char_2 = 3;   //reset press flag
